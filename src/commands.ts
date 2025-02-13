@@ -1,21 +1,29 @@
 import { Cmd } from 'redux-loop';
 import { fetchCatsCommit, fetchCatsRollback } from './actions';
 import { FetchCatsRequest } from './types/actions.type';
+import { Picture } from './types/picture.type';
+
+const parsePictureResponse = async (response: Response) => {
+  const data = await response.json();
+  return data.hits.map((hit: any) => ({
+    previewFormat: hit.previewURL,
+    webFormat: hit.webformatURL,
+    author: hit.user,
+    largeFormat: hit.largeImageURL
+  }));
+};
 
 export const cmdFetch = (action: FetchCatsRequest) =>
   Cmd.run(
-    () => {
-      return fetch(action.path, {
+    async () => {
+      const response = await fetch(action.path, {
         method: action.method,
-      }).then(checkStatus);
+      });
+      if (!response.ok) throw new Error(response.statusText);
+      return parsePictureResponse(response);
     },
     {
-      successActionCreator: fetchCatsCommit, // (equals to (payload) => fetchCatsCommit(payload))
-      failActionCreator: fetchCatsRollback, // (equals to (error) => fetchCatsCommit(error))
-    },
+      successActionCreator: fetchCatsCommit,
+      failActionCreator: fetchCatsRollback,
+    }
   );
-
-const checkStatus = (response: Response) => {
-  if (response.ok) return response;
-  throw new Error(response.statusText);
-};
