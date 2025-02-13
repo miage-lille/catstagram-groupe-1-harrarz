@@ -1,5 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
+import { useSelector } from 'react-redux';
+import { picturesSelector } from '../reducer';
 
 const Container = styled.div`
   padding: 1rem;
@@ -17,8 +19,21 @@ const Image = styled.img`
     transform: scale(1.2);
   }
 `;
+
 const Pictures = () => {
-  return null;
+  const pictures = useSelector(picturesSelector);
+
+  return (
+    <Container>
+      {pictures.map((picture, index) => (
+        <Image 
+          key={`${picture.author}-${index}`}
+          src={picture.previewFormat}
+          alt={`Picture by ${picture.author}`}
+        />
+      ))}
+    </Container>
+  );
 };
 
 export default Pictures;
