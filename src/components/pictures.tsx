@@ -1,10 +1,11 @@
 import React from 'react';
 import styled from 'styled-components';
 import { useSelector, useDispatch } from 'react-redux';
-import { picturesSelector, getSelectedPicture, isLoadingSelector } from '../reducer';
+import { picturesSelector, getSelectedPicture } from '../reducer';
 import { isSome } from 'fp-ts/Option';
 import ModalPortal from './modal';
 import { Picture } from '../types/picture.type';
+import { PicturesState } from '../types/api.type';
 
 const Container = styled.div`
   padding: 1rem;
@@ -31,10 +32,16 @@ const LoadingText = styled.div`
   font-size: 1.2rem;
 `;
 
+const ErrorText = styled.div`
+  padding: 2rem;
+  text-align: center;
+  color: #ff0000;
+  font-size: 1.2rem;
+`;
+
 const Pictures = () => {
-  const pictures = useSelector(picturesSelector);
-  const selectedPictureOption = useSelector(getSelectedPicture);
-  const isLoading = useSelector(isLoadingSelector);
+  const picturesState = useSelector(picturesSelector);
+  const selectedPicture = useSelector(getSelectedPicture);
   const dispatch = useDispatch();
 
   const handlePictureClick = (picture: Picture) => {
@@ -45,14 +52,18 @@ const Pictures = () => {
     dispatch({ type: 'CLOSE_MODAL' });
   };
 
-  if (isLoading) {
+  if (picturesState.kind === 'LOADING') {
     return <LoadingText>Loading cats...</LoadingText>;
+  }
+
+  if (picturesState.kind === 'FAILURE') {
+    return <ErrorText>Error: {picturesState.error}</ErrorText>;
   }
 
   return (
     <>
       <Container>
-        {pictures.map((picture, index) => (
+        {picturesState.pictures.map((picture: Picture, index: number) => (
           <Image 
             key={`${picture.author}-${index}`}
             src={picture.previewFormat}
@@ -62,9 +73,9 @@ const Pictures = () => {
         ))}
       </Container>
       
-      {isSome(selectedPictureOption) && (
+      {isSome(selectedPicture) && (
         <ModalPortal 
-          largeFormat={selectedPictureOption.value.largeFormat}
+          largeFormat={selectedPicture.value.largeFormat}
           close={handleCloseModal}
         />
       )}

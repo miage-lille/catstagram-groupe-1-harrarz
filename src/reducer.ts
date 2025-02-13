@@ -3,36 +3,21 @@ import { compose } from 'redux';
 import { Actions } from './types/actions.type';
 import { Picture } from './types/picture.type';
 import { Option, none, some } from 'fp-ts/Option';
-
-const API_KEY = '48828604-3ab7db17c0f0c243acbad50d5'; 
+import { PicturesState } from './types/api.type';
+import { loading, success, failure } from './api';
+import { cmdFetch } from './commands';
+import { fetchCatsRequest } from './actions';
 
 export type State = {
   counter: number;
-  pictures: Picture[];
-  selectedPicture: Option<Picture>;
-  isLoading: boolean;
+  pictures: PicturesState;
+  pictureSelected: Option<Picture>;
 }
 
 export const defaultState: State = {
-  counter: 0,
-  pictures: [],
-  selectedPicture: none,
-  isLoading: false
-}
-
-const fetchCats = async (counter: number) => {
-  const response = await fetch(`https://pixabay.com/api/?key=${API_KEY}&per_page=${counter}&q=cat`);
-  if (!response.ok) {
-    throw new Error('Failed to fetch cats');
-  }
-  const data = await response.json();
-  
-  return data.hits.map((hit: any) => ({
-    previewFormat: hit.previewURL,
-    webFormat: hit.webformatURL,
-    author: hit.user,
-    largeFormat: hit.largeImageURL
-  }));
+  counter: 3,
+  pictures: success([]),
+  pictureSelected: none
 };
 
 export const reducer = (state: State | undefined, action: Actions): State | Loop<State> => {
@@ -42,80 +27,54 @@ export const reducer = (state: State | undefined, action: Actions): State | Loop
     case 'INCREMENT': {
       const newCounter = state.counter + 1;
       return loop(
-        { ...state, counter: newCounter, isLoading: true },
-        Cmd.run(fetchCats, {
-          args: [newCounter],
-          successActionCreator: (pictures: any) => ({ 
-            type: 'FETCH_CATS_COMMIT', 
-            payload: pictures 
-          }),
-          failActionCreator: (error: any) => ({ 
-            type: 'FETCH_CATS_ROLLBACK', 
-            error 
-          })
-        })
+        { ...state, counter: newCounter },
+        Cmd.action(fetchCatsRequest(newCounter))
       );
     }
+
     case 'DECREMENT': {
-      const newCounter = Math.max(3, state.counter - 1);
+      if (state.counter <= 3) return state;
+      const newCounter = state.counter - 1;
       return loop(
-        { ...state, counter: newCounter, isLoading: true },
-        Cmd.run(fetchCats, {
-          args: [newCounter],
-          successActionCreator: (pictures: any) => ({ 
-            type: 'FETCH_CATS_COMMIT', 
-            payload: pictures 
-          }),
-          failActionCreator: (error: any) => ({ 
-            type: 'FETCH_CATS_ROLLBACK', 
-            error 
-          })
-        })
+        { ...state, counter: newCounter },
+        Cmd.action(fetchCatsRequest(newCounter))
       );
     }
+
     case 'SELECT_PICTURE':
       return {
         ...state,
-        selectedPicture: some(action.picture)
+        pictureSelected: some(action.picture)
       };
+
     case 'CLOSE_MODAL':
       return {
         ...state,
-        selectedPicture: none
+        pictureSelected: none
       };
+
     case 'FETCH_CATS_REQUEST':
-      return {
-        ...state,
-        isLoading: true
-      };
+      return loop(
+        { ...state, pictures: loading() },
+        cmdFetch(action)
+      );
+
     case 'FETCH_CATS_COMMIT':
       return {
         ...state,
-        pictures: action.payload as Picture[],
-        isLoading: false
+        pictures: success(action.payload as Picture[])
       };
+
     case 'FETCH_CATS_ROLLBACK':
       return {
         ...state,
-        isLoading: false
+        pictures: failure(action.error.message)
       };
   }
 };
 
-export const counterSelector = (state: State) => {
-  return state.counter;
-};
-
-export const picturesSelector = (state: State) => {
-  return state.pictures;
-};
-
-export const getSelectedPicture = (state: State) => {
-  return state.selectedPicture;
-};
-
-export const isLoadingSelector = (state: State) => {
-  return state.isLoading;
-};
+export const counterSelector = (state: State): number => state.counter;
+export const picturesSelector = (state: State): PicturesState => state.pictures;
+export const getSelectedPicture = (state: State): Option<Picture> => state.pictureSelected;
 
 export default compose(liftState, reducer);
