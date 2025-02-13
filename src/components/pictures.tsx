@@ -1,7 +1,8 @@
 import React from 'react';
 import styled from 'styled-components';
 import { useSelector, useDispatch } from 'react-redux';
-import { picturesSelector, getSelectedPicture } from '../reducer';
+import { picturesSelector, getSelectedPicture, isLoadingSelector } from '../reducer';
+import { isSome } from 'fp-ts/Option';
 import ModalPortal from './modal';
 import { Picture } from '../types/picture.type';
 
@@ -23,9 +24,17 @@ const Image = styled.img`
   }
 `;
 
+const LoadingText = styled.div`
+  padding: 2rem;
+  text-align: center;
+  color: #666;
+  font-size: 1.2rem;
+`;
+
 const Pictures = () => {
   const pictures = useSelector(picturesSelector);
-  const selectedPicture = useSelector(getSelectedPicture);
+  const selectedPictureOption = useSelector(getSelectedPicture);
+  const isLoading = useSelector(isLoadingSelector);
   const dispatch = useDispatch();
 
   const handlePictureClick = (picture: Picture) => {
@@ -35,6 +44,10 @@ const Pictures = () => {
   const handleCloseModal = () => {
     dispatch({ type: 'CLOSE_MODAL' });
   };
+
+  if (isLoading) {
+    return <LoadingText>Loading cats...</LoadingText>;
+  }
 
   return (
     <>
@@ -49,9 +62,9 @@ const Pictures = () => {
         ))}
       </Container>
       
-      {selectedPicture && (
+      {isSome(selectedPictureOption) && (
         <ModalPortal 
-          largeFormat={selectedPicture.largeFormat} 
+          largeFormat={selectedPictureOption.value.largeFormat}
           close={handleCloseModal}
         />
       )}

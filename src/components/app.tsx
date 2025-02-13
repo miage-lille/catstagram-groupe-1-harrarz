@@ -9,7 +9,6 @@ const App = () => (
     <>
       <Counter />
       <Pictures />
-      <div>Hello World ! Go to build your Catstagram 💪 !</div>
     </>
   </Provider>
 );
